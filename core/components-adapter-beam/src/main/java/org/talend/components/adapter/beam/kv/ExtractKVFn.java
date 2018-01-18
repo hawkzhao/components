@@ -21,14 +21,21 @@ import org.apache.beam.sdk.values.KV;
 
 public class ExtractKVFn extends DoFn<IndexedRecord, KV<IndexedRecord, IndexedRecord>> {
 
-    private List<String> keyList = null;
+    private List<String> keyPathList = null;
+
+    private List<String> valuePathList = null;
 
     private transient Schema keySchema = null;
 
     private transient Schema valueSchema = null;
 
-    public ExtractKVFn(List<String> keyList) {
-        this.keyList = keyList;
+    public ExtractKVFn(List<String> keyPathList) {
+        this.keyPathList = keyPathList;
+    }
+
+    public ExtractKVFn(List<String> keyPathList, List<String> valuePathList) {
+        this.keyPathList = keyPathList;
+        this.valuePathList = valuePathList;
     }
 
     @Setup
@@ -39,10 +46,14 @@ public class ExtractKVFn extends DoFn<IndexedRecord, KV<IndexedRecord, IndexedRe
     public void processElement(ProcessContext context) {
         IndexedRecord inputRecord = context.element();
         if (keySchema == null) {
-            keySchema = SchemaGeneratorUtils.extractKeys(inputRecord.getSchema(), keyList);
+            keySchema = SchemaGeneratorUtils.extractKeys(inputRecord.getSchema(), keyPathList);
         }
         if (valueSchema == null) {
-            valueSchema = SchemaGeneratorUtils.extractValues(inputRecord.getSchema(), keyList);
+            if (valuePathList == null) {
+                valueSchema = SchemaGeneratorUtils.extractValues(inputRecord.getSchema(), keyPathList);
+            } else {
+                valueSchema = SchemaGeneratorUtils.extractKeys(inputRecord.getSchema(), valuePathList);
+            }
         }
         context.output(KV.of(KeyValueUtils.extractIndexedRecord(inputRecord, keySchema),
                 KeyValueUtils.extractIndexedRecord(inputRecord, valueSchema)));
