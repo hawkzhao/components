@@ -28,24 +28,28 @@ public class AggregateFunctionProperties extends PropertiesImpl {
      * If columnName's type is not numerical, Function will contain "COUNT, LIST" only
      *
      */
-    public EnumProperty<GroupingFunction> groupingFunction =
-            PropertyFactory.newEnum("groupingFunction", GroupingFunction.class);
+    public EnumProperty<AggregateColumnFunction> aggregateColumnFunction =
+            PropertyFactory.newEnum("aggregateColumnFunction", AggregateColumnFunction.class);
+
+    /**
+     * This is the output column name defined by user, if empty, then the output column will be
+     * "inputColName_groupingFunctionName"
+     */
+    public Property<String> outputColumnName = PropertyFactory.newString("outputColumnName", "");
 
     @Override
     public void setupLayout() {
         super.setupLayout();
         Form mainForm = new Form(this, Form.MAIN);
         mainForm.addRow(Widget.widget(columnName).setWidgetType(Widget.DATALIST_WIDGET_TYPE));
-        mainForm.addRow(groupingFunction);
+        mainForm.addRow(aggregateColumnFunction);
+        mainForm.addRow(outputColumnName);
     }
 
     @Override
     public void setupProperties() {
         super.setupProperties();
-        groupingFunction.setValue(GroupingFunction.LIST);
+        aggregateColumnFunction.setValue(AggregateColumnFunction.LIST);
     }
 
-    public enum AggregateFunctionType {
-
-    }
 }

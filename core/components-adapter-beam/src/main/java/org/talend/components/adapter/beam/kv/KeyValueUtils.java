@@ -94,7 +94,7 @@ public class KeyValueUtils {
      */
     public static IndexedRecord mergeIndexedRecord(IndexedRecord keyRecord, IndexedRecord valueRecord,
             Schema outputSchema) {
-        GenericRecordBuilder outputRecord = new GenericRecordBuilder(outputSchema);
+        Record outputRecord = new Record(outputSchema);
         Schema keySchema = getUnwrappedSchema(keyRecord);
         Schema valueSchema = getUnwrappedSchema(valueRecord);
         for (Field field : outputSchema.getFields()) {
@@ -110,22 +110,30 @@ public class KeyValueUtils {
                             && outputChildSchema.getType().equals(Type.RECORD)) {
                         Object childRecord = mergeIndexedRecord((IndexedRecord) keyValue, (IndexedRecord) valueValue,
                                 outputChildSchema);
-                        outputRecord.set(field.name(), childRecord);
+                        outputRecord.put(field.name(), childRecord);
                     }
                 } else {
-                    outputRecord.set(field.name(), keyValue);
+                    if (keyValue != null || AvroUtils.isNullable(field.schema())) {
+                        outputRecord.put(field.name(), keyValue);
+                    }
                 }
             } else if (keySchema.getField(field.name()) != null) {
-                outputRecord.set(field.name(), keyRecord.get(keySchema.getField(field.name()).pos()));
+                Object keyValue = keyRecord.get(keySchema.getField(field.name()).pos());
+                if (keyValue != null || AvroUtils.isNullable(field.schema())) {
+                    outputRecord.put(field.name(), keyValue);
+                }
             } else if (valueSchema.getField(field.name()) != null) {
-                outputRecord.set(field.name(), valueRecord.get(valueSchema.getField(field.name()).pos()));
+                Object valueValue = valueRecord.get(valueSchema.getField(field.name()).pos());
+                if (valueValue != null || AvroUtils.isNullable(field.schema())) {
+                    outputRecord.put(field.name(), valueValue);
+                }
             } else {
                 // element not found => set to the value and its hierarchy to null
-                outputRecord.set(field.name(), KeyValueUtils.generateEmptyRecord(outputSchema, field.name()));
+                outputRecord.put(field.name(), KeyValueUtils.generateEmptyRecord(outputSchema, field.name()));
             }
         }
 
-        return outputRecord.build();
+        return outputRecord;
     }
 
     /**

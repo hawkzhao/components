@@ -1,9 +1,12 @@
 package org.talend.components.processing.definition.aggregate;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.talend.components.api.component.Connector;
 import org.talend.components.api.component.PropertyPathConnector;
 import org.talend.components.common.FixedConnectorsComponentProperties;
@@ -41,6 +44,28 @@ public class AggregateProperties extends FixedConnectorsComponentProperties {
                 }
             });
 
+    public List<AggregateGroupProperties> filteredGroupBy() {
+        List<AggregateGroupProperties> filteredGroupBy = new ArrayList<>();
+        for (AggregateGroupProperties groupProps : groupBy.getPropertiesList()) {
+            if (StringUtils.isEmpty(groupProps.columnName.getValue())) {
+                continue;
+            }
+            filteredGroupBy.add(groupProps);
+        }
+        return filteredGroupBy;
+    }
+
+    public List<AggregateFunctionProperties> filteredFunctions() {
+        List<AggregateFunctionProperties> filteredFunctions = new ArrayList<>();
+        for (AggregateFunctionProperties funcProps : functions.getPropertiesList()) {
+            if (StringUtils.isEmpty(funcProps.columnName.getValue())) {
+                continue;
+            }
+            filteredFunctions.add(funcProps);
+        }
+        return filteredFunctions;
+    }
+
     public AggregateProperties(String name) {
         super(name);
     }
@@ -58,7 +83,9 @@ public class AggregateProperties extends FixedConnectorsComponentProperties {
     @Override
     public void setupProperties() {
         super.setupProperties();
+        groupBy.init();
         groupBy.createAndAddRow();
+        functions.init();
         functions.createAndAddRow();
     }
 
