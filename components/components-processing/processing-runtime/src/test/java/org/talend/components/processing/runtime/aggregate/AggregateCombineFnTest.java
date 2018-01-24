@@ -18,7 +18,6 @@ public class AggregateCombineFnTest {
         fn2.createAccumulator();
         fn3.createAccumulator();
         double delta = 0;
-        Assert.assertEquals(0, fn1.extractOutput(), delta);
 
         fn1.addInput(testData.get(0));
         Assert.assertEquals(1, fn1.extractOutput(), delta);
@@ -47,7 +46,6 @@ public class AggregateCombineFnTest {
         fn2.createAccumulator();
         fn3.createAccumulator();
         double delta = 0.000000000000001;
-        Assert.assertEquals(0, fn1.extractOutput(), delta);
 
         fn1.addInput(testData.get(0));
         Assert.assertEquals(1.1, fn1.extractOutput(), delta);
@@ -76,7 +74,6 @@ public class AggregateCombineFnTest {
         fn2.createAccumulator();
         fn3.createAccumulator();
         int delta = 0;
-        Assert.assertEquals(0, fn1.extractOutput(), delta);
 
         fn1.addInput(testData.get(0));
         Assert.assertEquals(1, fn1.extractOutput(), delta);
@@ -171,11 +168,10 @@ public class AggregateCombineFnTest {
         fn2.createAccumulator();
         fn3.createAccumulator();
         int delta = 0;
-        Assert.assertEquals(Integer.MAX_VALUE, fn1.getAccumulators()[0], delta);
         fn1.addInput(testData[0]);
         Assert.assertEquals(testData[0], fn1.extractOutput(), delta);
         fn1.addInput(testData[1]);
-        Assert.assertEquals(testData[1], fn1.getAccumulators()[0], delta);
+        Assert.assertEquals(testData[1], fn1.getAccumulators(), delta);
 
         fn2.addInput(testData[2]);
         fn2.addInput(testData[3]);
@@ -198,11 +194,10 @@ public class AggregateCombineFnTest {
         fn2.createAccumulator();
         fn3.createAccumulator();
         long delta = 0l;
-        Assert.assertEquals(Long.MAX_VALUE, fn1.getAccumulators()[0], delta);
         fn1.addInput(testData[0]);
         Assert.assertEquals(testData[0], fn1.extractOutput(), delta);
         fn1.addInput(testData[1]);
-        Assert.assertEquals(testData[1], fn1.getAccumulators()[0], delta);
+        Assert.assertEquals(testData[1], fn1.getAccumulators(), delta);
 
         fn2.addInput(testData[2]);
         fn2.addInput(testData[3]);
@@ -225,11 +220,10 @@ public class AggregateCombineFnTest {
         AggregateCombineFn.MinFloatAccumulatorFn fn3 = new AggregateCombineFn.MinFloatAccumulatorFn();
         fn3.createAccumulator();
         float delta = 0.0f;
-        Assert.assertEquals(Float.MAX_VALUE, fn1.getAccumulators()[0], delta);
         fn1.addInput(testData[0]);
         Assert.assertEquals(testData[0], fn1.extractOutput(), delta);
         fn1.addInput(testData[1]);
-        Assert.assertEquals(testData[1], fn1.getAccumulators()[0], delta);
+        Assert.assertEquals(testData[1], fn1.getAccumulators(), delta);
 
         fn2.addInput(testData[2]);
         fn2.addInput(testData[3]);
@@ -252,11 +246,10 @@ public class AggregateCombineFnTest {
         AggregateCombineFn.MinDoubleAccumulatorFn fn3 = new AggregateCombineFn.MinDoubleAccumulatorFn();
         fn3.createAccumulator();
         double delta = 0.0;
-        Assert.assertEquals(Double.MAX_VALUE, fn1.getAccumulators()[0], delta);
         fn1.addInput(testData[0]);
         Assert.assertEquals(testData[0], fn1.extractOutput(), delta);
         fn1.addInput(testData[1]);
-        Assert.assertEquals(testData[1], fn1.getAccumulators()[0], delta);
+        Assert.assertEquals(testData[1], fn1.getAccumulators(), delta);
 
         fn2.addInput(testData[2]);
         fn2.addInput(testData[3]);
@@ -279,11 +272,10 @@ public class AggregateCombineFnTest {
         AggregateCombineFn.MaxIntegerAccumulatorFn fn3 = new AggregateCombineFn.MaxIntegerAccumulatorFn();
         fn3.createAccumulator();
         int delta = 0;
-        Assert.assertEquals(Integer.MIN_VALUE, fn1.getAccumulators()[0], delta);
         fn1.addInput(testData[0]);
         Assert.assertEquals(testData[0], fn1.extractOutput(), delta);
         fn1.addInput(testData[1]);
-        Assert.assertEquals(testData[1], fn1.getAccumulators()[0], delta);
+        Assert.assertEquals(testData[1], fn1.getAccumulators(), delta);
 
         fn2.addInput(testData[2]);
         fn2.addInput(testData[3]);
@@ -306,11 +298,10 @@ public class AggregateCombineFnTest {
         AggregateCombineFn.MaxLongAccumulatorFn fn3 = new AggregateCombineFn.MaxLongAccumulatorFn();
         fn3.createAccumulator();
         long delta = 0l;
-        Assert.assertEquals(Long.MIN_VALUE, fn1.getAccumulators()[0], delta);
         fn1.addInput(testData[0]);
         Assert.assertEquals(testData[0], fn1.extractOutput(), delta);
         fn1.addInput(testData[1]);
-        Assert.assertEquals(testData[1], fn1.getAccumulators()[0], delta);
+        Assert.assertEquals(testData[1], fn1.getAccumulators(), delta);
 
         fn2.addInput(testData[2]);
         fn2.addInput(testData[3]);
@@ -333,11 +324,10 @@ public class AggregateCombineFnTest {
         AggregateCombineFn.MaxFloatAccumulatorFn fn3 = new AggregateCombineFn.MaxFloatAccumulatorFn();
         fn3.createAccumulator();
         float delta = 0.0f;
-        Assert.assertEquals(Float.MIN_VALUE, fn1.getAccumulators()[0], delta);
         fn1.addInput(testData[0]);
         Assert.assertEquals(testData[0], fn1.extractOutput(), delta);
         fn1.addInput(testData[1]);
-        Assert.assertEquals(testData[1], fn1.getAccumulators()[0], delta);
+        Assert.assertEquals(testData[1], fn1.getAccumulators(), delta);
 
         fn2.addInput(testData[2]);
         fn2.addInput(testData[3]);
@@ -360,11 +350,10 @@ public class AggregateCombineFnTest {
         AggregateCombineFn.MaxDoubleAccumulatorFn fn3 = new AggregateCombineFn.MaxDoubleAccumulatorFn();
         fn3.createAccumulator();
         double delta = 0.0;
-        Assert.assertEquals(Double.MIN_VALUE, fn1.getAccumulators()[0], delta);
         fn1.addInput(testData[0]);
         Assert.assertEquals(testData[0], fn1.extractOutput(), delta);
         fn1.addInput(testData[1]);
-        Assert.assertEquals(testData[1], fn1.getAccumulators()[0], delta);
+        Assert.assertEquals(testData[1], fn1.getAccumulators(), delta);
 
         fn2.addInput(testData[2]);
         fn2.addInput(testData[3]);

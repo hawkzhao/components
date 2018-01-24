@@ -23,7 +23,7 @@ public class AggregateUtilsTest {
             funcProps.aggregateColumnFunction.setValue(AggregateColumnFunction.COUNT);
             Schema.Field newField = AggregateUtils.genField(f1, funcProps);
             Assert.assertEquals("f1_COUNT", newField.name());
-            Assert.assertEquals(AvroUtils._long(), newField.schema());
+            Assert.assertEquals(AvroUtils._long(), AvroUtils.unwrapIfNullable(newField.schema()));
         }
 
         {
@@ -33,7 +33,7 @@ public class AggregateUtilsTest {
             funcProps.outputColumnName.setValue("new_f2");
             Schema.Field newField = AggregateUtils.genField(f2, funcProps);
             Assert.assertEquals("new_f2", newField.name());
-            Assert.assertEquals(AvroUtils._long(), newField.schema());
+            Assert.assertEquals(AvroUtils._long(), AvroUtils.unwrapIfNullable(newField.schema()));
         }
 
         {
@@ -44,7 +44,7 @@ public class AggregateUtilsTest {
             funcProps.outputColumnName.setValue("new.f3");
             Schema.Field newField = AggregateUtils.genField(f3, funcProps);
             Assert.assertEquals("f3", newField.name());
-            Assert.assertEquals(AvroUtils._long(), newField.schema());
+            Assert.assertEquals(AvroUtils._long(), AvroUtils.unwrapIfNullable(newField.schema()));
         }
     }
 

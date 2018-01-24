@@ -95,7 +95,8 @@ public class AggregateUtils {
      * @return
      */
     public static Schema.Field genField(Schema.Field originalField, AggregateFunctionProperties funcProps) {
-        Schema newFieldSchema = genFieldType(originalField.schema(), funcProps.aggregateColumnFunction.getValue());
+        Schema newFieldSchema = AvroUtils
+                .wrapAsNullable(genFieldType(originalField.schema(), funcProps.aggregateColumnFunction.getValue()));
         String outputColPath = funcProps.outputColumnName.getValue();
         String newFieldName;
         if (StringUtils.isEmpty(outputColPath)) {
@@ -124,6 +125,7 @@ public class AggregateUtils {
             return AvroUtils._long();
         }
         default:
+            fieldType = AvroUtils.unwrapIfNullable(fieldType);
             if (!AvroUtils.isNumerical(fieldType.getType())) {
                 TalendRuntimeException.build(ComponentsErrorCode.SCHEMA_TYPE_MISMATCH).setAndThrow("aggregate",
                         "int/long/float/double", fieldType.getType().getName());

@@ -72,8 +72,7 @@ public class AggregateCombineFn
         for (AccumulatorElement accumulatorElement : accumulator.accumulatorElements) {
             IndexedRecord outputFieldRecord = accumulatorElement.extractOutput();
             if (outputFieldRecord != null) {
-                record = KeyValueUtils.mergeIndexedRecord(outputFieldRecord, record,
-                        outputSchema);
+                record = KeyValueUtils.mergeIndexedRecord(outputFieldRecord, record, outputSchema);
             }
         }
         return record;
@@ -153,6 +152,7 @@ public class AggregateCombineFn
         }
 
         private AccumulatorFn getProperCombineFn(Schema inputColSchema, AggregateColumnFunction func) {
+            inputColSchema = AvroUtils.unwrapIfNullable(inputColSchema);
             switch (func) {
 
             case LIST:
@@ -201,7 +201,7 @@ public class AggregateCombineFn
 
         public void addInput(Object inputValue);
 
-        public void mergeAccumulators(Iterable<AccumT> accs);
+        public void mergeAccumulators(Iterable<AccumT> accsList);
 
         public AccumT getAccumulators();
 
@@ -210,7 +210,7 @@ public class AggregateCombineFn
 
     public static class AvgAcc {
 
-        Double sum = 0.0;
+        Double sum;
 
         Long count = 0l;
     }
@@ -221,21 +221,24 @@ public class AggregateCombineFn
 
         @Override
         public void createAccumulator() {
-            this.accs = new AvgAcc();
+            accs = new AvgAcc();
         }
 
         @Override
         public void addInput(Object inputValue) {
             if (inputValue != null) {
-                this.accs.sum += Double.valueOf(String.valueOf(inputValue));
-                this.accs.count += 1;
+                Double value = Double.valueOf(String.valueOf(inputValue));
+                accs.sum = accs.sum == null ? value : accs.sum + value;
             }
+            accs.count += 1;
         }
 
         @Override
-        public void mergeAccumulators(Iterable<AvgAcc> accs) {
-            for (AvgAcc acc : accs) {
-                this.accs.sum += acc.sum;
+        public void mergeAccumulators(Iterable<AvgAcc> accsList) {
+            for (AvgAcc acc : accsList) {
+                if (acc.sum != null) {
+                    accs.sum = accs.sum == null ? acc.sum : accs.sum + acc.sum;
+                }
                 this.accs.count += acc.count;
             }
         }
@@ -247,113 +250,111 @@ public class AggregateCombineFn
 
         @Override
         public Double extractOutput() {
-            return accs.count == 0l ? 0.0 : accs.sum / accs.count;
+            return accs.sum == null ? null : (accs.count == 0l ? 0.0 : accs.sum / accs.count);
         }
     }
 
-    public static class SumDoubleAccumulatorFn implements AccumulatorFn<double[], Double> {
+    public static abstract class AccumulatorFnAbstract<T> implements AccumulatorFn<T, T> {
 
-        double[] accs;
+        T accs;
 
         @Override
         public void createAccumulator() {
-            this.accs = new double[] { 0.0 };
         }
 
         @Override
         public void addInput(Object inputValue) {
             if (inputValue != null) {
-                this.accs[0] += Double.valueOf(String.valueOf(inputValue));
+                T value = convertFromObject(inputValue);
+                accs = accs == null ? value : apply(value, accs);
             }
         }
 
         @Override
-        public void mergeAccumulators(Iterable<double[]> accs) {
-            for (double[] acc : accs) {
-                this.accs[0] += acc[0];
+        public void mergeAccumulators(Iterable<T> accsList) {
+            for (T acc : accsList) {
+                if (acc == null) {
+                    continue;
+                }
+                accs = accs == null ? acc : apply(acc, accs);
             }
         }
 
         @Override
-        public double[] getAccumulators() {
+        public T getAccumulators() {
             return accs;
         }
 
         @Override
-        public Double extractOutput() {
-            return accs[0];
-        }
-    }
-
-    public static class SumLongAccumulatorFn implements AccumulatorFn<long[], Long> {
-
-        long[] accs;
-
-        @Override
-        public void createAccumulator() {
-            this.accs = new long[] { 0l };
-        }
-
-        @Override
-        public void addInput(Object inputValue) {
-            if (inputValue != null) {
-                this.accs[0] += Long.valueOf(String.valueOf(inputValue));
-            }
-        }
-
-        @Override
-        public void mergeAccumulators(Iterable<long[]> accs) {
-            for (long[] acc : accs) {
-                this.accs[0] += acc[0];
-            }
-        }
-
-        @Override
-        public long[] getAccumulators() {
+        public T extractOutput() {
             return accs;
         }
 
+        public abstract T convertFromObject(Object inputValue);
+
+        public abstract T apply(T left, T right);
+
+    }
+
+    public static class SumDoubleAccumulatorFn extends AccumulatorFnAbstract<Double> {
+
         @Override
-        public Long extractOutput() {
-            return accs[0];
+        public Double convertFromObject(Object inputValue) {
+            return Double.valueOf(String.valueOf(inputValue));
+        }
+
+        @Override
+        public Double apply(Double left, Double right) {
+            return left + right;
         }
     }
 
-    public static class CountAccumulatorFn implements AccumulatorFn<long[], Long> {
+    public static class SumLongAccumulatorFn extends AccumulatorFnAbstract<Long> {
 
-        long[] accs;
+        @Override
+        public Long convertFromObject(Object inputValue) {
+            return Long.valueOf(String.valueOf(inputValue));
+        }
+
+        @Override
+        public Long apply(Long left, Long right) {
+            return left + right;
+        }
+    }
+
+    public static class CountAccumulatorFn implements AccumulatorFn<Long, Long> {
+
+        Long accs;
 
         @Override
         public void createAccumulator() {
-            this.accs = new long[] { 0 };
+            accs = 0l;
         }
 
         @Override
         public void addInput(Object inputValue) {
-            if (inputValue != null) { // TODO how to check node is null, or accumulative no matter what it is
-                this.accs[0] += 1;
-            }
+            accs += 1;
         }
 
         @Override
-        public void mergeAccumulators(Iterable<long[]> accs) {
-            Iterator<long[]> iterator = accs.iterator();
+        public void mergeAccumulators(Iterable<Long> accsList) {
+            Iterator<Long> iterator = accsList.iterator();
             if (!iterator.hasNext()) {
                 createAccumulator();
             }
             while (iterator.hasNext()) {
-                this.accs[0] += iterator.next()[0];
+                accs += iterator.next();
             }
         }
 
         @Override
-        public long[] getAccumulators() {
+        public Long getAccumulators() {
             return accs;
         }
 
         @Override
         public Long extractOutput() {
-            return accs[0];
+            return accs;
         }
     }
 
@@ -363,309 +364,133 @@ public class AggregateCombineFn
 
         @Override
         public void createAccumulator() {
-            this.accs = new ArrayList();
+            accs = new ArrayList();
         }
 
         @Override
         public void addInput(Object inputValue) {
-            this.accs.add(inputValue);
+            accs.add(inputValue);
         }
 
         @Override
-        public void mergeAccumulators(Iterable<List> accs) {
-            for (List acc : accs) {
-                this.accs.addAll(acc);
+        public void mergeAccumulators(Iterable<List> accsList) {
+            for (List acc : accsList) {
+                accs.addAll(acc);
             }
         }
 
         @Override
         public List getAccumulators() {
-            return this.accs;
+            return accs;
         }
 
         @Override
         public List extractOutput() {
-            return getAccumulators();
+            return accs;
         }
     }
 
-    public static class MinIntegerAccumulatorFn implements AccumulatorFn<int[], Integer> {
-
-        int[] accs;
+    public static class MinIntegerAccumulatorFn extends AccumulatorFnAbstract<Integer> {
 
         @Override
-        public void createAccumulator() {
-            this.accs = new int[] { Integer.MAX_VALUE };
+        public Integer convertFromObject(Object inputValue) {
+            return Integer.valueOf(String.valueOf(inputValue));
         }
 
         @Override
-        public void addInput(Object inputValue) {
-            if (inputValue != null) {
-                this.accs[0] = this.accs[0] < Integer.valueOf(String.valueOf(inputValue)) ? this.accs[0]
-                        : Integer.valueOf(String.valueOf(inputValue));
-            }
-        }
-
-        @Override
-        public void mergeAccumulators(Iterable<int[]> accs) {
-            for (int[] acc : accs) {
-                this.accs[0] = this.accs[0] < acc[0] ? this.accs[0] : acc[0];
-            }
-        }
-
-        @Override
-        public int[] getAccumulators() {
-            return this.accs;
-        }
-
-        @Override
-        public Integer extractOutput() {
-            return this.accs[0];
+        public Integer apply(Integer left, Integer right) {
+            return left < right ? left : right;
         }
     }
 
-    public static class MinLongAccumulatorFn implements AccumulatorFn<long[], Long> {
-
-        long[] accs;
+    public static class MinLongAccumulatorFn extends AccumulatorFnAbstract<Long> {
 
         @Override
-        public void createAccumulator() {
-            this.accs = new long[] { Long.MAX_VALUE };
+        public Long convertFromObject(Object inputValue) {
+            return Long.valueOf(String.valueOf(inputValue));
         }
 
         @Override
-        public void addInput(Object inputValue) {
-            if (inputValue != null) {
-                this.accs[0] = this.accs[0] < Long.valueOf(String.valueOf(inputValue)) ? this.accs[0]
-                        : Long.valueOf(String.valueOf(inputValue));
-            }
-        }
-
-        @Override
-        public void mergeAccumulators(Iterable<long[]> accs) {
-            for (long[] acc : accs) {
-                this.accs[0] = this.accs[0] < acc[0] ? this.accs[0] : acc[0];
-            }
-        }
-
-        @Override
-        public long[] getAccumulators() {
-            return this.accs;
-        }
-
-        @Override
-        public Long extractOutput() {
-            return this.accs[0];
+        public Long apply(Long left, Long right) {
+            return left < right ? left : right;
         }
     }
 
-    public static class MinFloatAccumulatorFn implements AccumulatorFn<float[], Float> {
-
-        float[] accs;
+    public static class MinFloatAccumulatorFn extends AccumulatorFnAbstract<Float> {
 
         @Override
-        public void createAccumulator() {
-            this.accs = new float[] { Float.MAX_VALUE };
+        public Float convertFromObject(Object inputValue) {
+            return Float.valueOf(String.valueOf(inputValue));
         }
 
         @Override
-        public void addInput(Object inputValue) {
-            if (inputValue != null) {
-                this.accs[0] = this.accs[0] < Float.valueOf(String.valueOf(inputValue)) ? this.accs[0]
-                        : Float.valueOf(String.valueOf(inputValue));
-            }
-        }
-
-        @Override
-        public void mergeAccumulators(Iterable<float[]> accs) {
-            for (float[] acc : accs) {
-                this.accs[0] = this.accs[0] < acc[0] ? this.accs[0] : acc[0];
-            }
-        }
-
-        @Override
-        public float[] getAccumulators() {
-            return this.accs;
-        }
-
-        @Override
-        public Float extractOutput() {
-            return this.accs[0];
+        public Float apply(Float left, Float right) {
+            return left < right ? left : right;
         }
     }
 
-    public static class MinDoubleAccumulatorFn implements AccumulatorFn<double[], Double> {
-
-        double[] accs;
+    public static class MinDoubleAccumulatorFn extends AccumulatorFnAbstract<Double> {
 
         @Override
-        public void createAccumulator() {
-            this.accs = new double[] { Double.MAX_VALUE };
+        public Double convertFromObject(Object inputValue) {
+            return Double.valueOf(String.valueOf(inputValue));
         }
 
         @Override
-        public void addInput(Object inputValue) {
-            if (inputValue != null) {
-                this.accs[0] = this.accs[0] < Double.valueOf(String.valueOf(inputValue)) ? this.accs[0]
-                        : Double.valueOf(String.valueOf(inputValue));
-            }
-        }
-
-        @Override
-        public void mergeAccumulators(Iterable<double[]> accs) {
-            for (double[] acc : accs) {
-                this.accs[0] = this.accs[0] < acc[0] ? this.accs[0] : acc[0];
-            }
-        }
-
-        @Override
-        public double[] getAccumulators() {
-            return this.accs;
-        }
-
-        @Override
-        public Double extractOutput() {
-            return this.accs[0];
+        public Double apply(Double left, Double right) {
+            return left < right ? left : right;
         }
     }
 
-    public static class MaxIntegerAccumulatorFn implements AccumulatorFn<int[], Integer> {
-
-        int[] accs;
+    public static class MaxIntegerAccumulatorFn extends AccumulatorFnAbstract<Integer> {
 
         @Override
-        public void createAccumulator() {
-            this.accs = new int[] { Integer.MIN_VALUE };
+        public Integer convertFromObject(Object inputValue) {
+            return Integer.valueOf(String.valueOf(inputValue));
         }
 
         @Override
-        public void addInput(Object inputValue) {
-            if (inputValue != null) {
-                this.accs[0] = this.accs[0] > Integer.valueOf(String.valueOf(inputValue)) ? this.accs[0]
-                        : Integer.valueOf(String.valueOf(inputValue));
-            }
-        }
-
-        @Override
-        public void mergeAccumulators(Iterable<int[]> accs) {
-            for (int[] acc : accs) {
-                this.accs[0] = this.accs[0] > acc[0] ? this.accs[0] : acc[0];
-            }
-        }
-
-        @Override
-        public int[] getAccumulators() {
-            return this.accs;
-        }
-
-        @Override
-        public Integer extractOutput() {
-            return this.accs[0];
+        public Integer apply(Integer left, Integer right) {
+            return left > right ? left : right;
         }
     }
 
-    public static class MaxLongAccumulatorFn implements AccumulatorFn<long[], Long> {
-
-        long[] accs;
+    public static class MaxLongAccumulatorFn extends AccumulatorFnAbstract<Long> {
 
         @Override
-        public void createAccumulator() {
-            this.accs = new long[] { Long.MIN_VALUE };
+        public Long convertFromObject(Object inputValue) {
+            return Long.valueOf(String.valueOf(inputValue));
         }
 
         @Override
-        public void addInput(Object inputValue) {
-            if (inputValue != null) {
-                this.accs[0] = this.accs[0] > Long.valueOf(String.valueOf(inputValue)) ? this.accs[0]
-                        : Long.valueOf(String.valueOf(inputValue));
-            }
-        }
-
-        @Override
-        public void mergeAccumulators(Iterable<long[]> accs) {
-            for (long[] acc : accs) {
-                this.accs[0] = this.accs[0] > acc[0] ? this.accs[0] : acc[0];
-            }
-        }
-
-        @Override
-        public long[] getAccumulators() {
-            return this.accs;
-        }
-
-        @Override
-        public Long extractOutput() {
-            return this.accs[0];
+        public Long apply(Long left, Long right) {
+            return left > right ? left : right;
         }
     }
 
-    public static class MaxFloatAccumulatorFn implements AccumulatorFn<float[], Float> {
-
-        float[] accs;
+    public static class MaxFloatAccumulatorFn extends AccumulatorFnAbstract<Float> {
 
         @Override
-        public void createAccumulator() {
-            this.accs = new float[] { Float.MIN_VALUE };
+        public Float convertFromObject(Object inputValue) {
+            return Float.valueOf(String.valueOf(inputValue));
         }
 
         @Override
-        public void addInput(Object inputValue) {
-            if (inputValue != null) {
-                this.accs[0] = this.accs[0] > Float.valueOf(String.valueOf(inputValue)) ? this.accs[0]
-                        : Float.valueOf(String.valueOf(inputValue));
-            }
-        }
-
-        @Override
-        public void mergeAccumulators(Iterable<float[]> accs) {
-            for (float[] acc : accs) {
-                this.accs[0] = this.accs[0] > acc[0] ? this.accs[0] : acc[0];
-            }
-        }
-
-        @Override
-        public float[] getAccumulators() {
-            return this.accs;
-        }
-
-        @Override
-        public Float extractOutput() {
-            return this.accs[0];
+        public Float apply(Float left, Float right) {
+            return left > right ? left : right;
         }
     }
 
-    public static class MaxDoubleAccumulatorFn implements AccumulatorFn<double[], Double> {
-
-        double[] accs;
+    public static class MaxDoubleAccumulatorFn extends AccumulatorFnAbstract<Double> {
 
         @Override
-        public void createAccumulator() {
-            this.accs = new double[] { Double.MIN_VALUE };
+        public Double convertFromObject(Object inputValue) {
+            return Double.valueOf(String.valueOf(inputValue));
         }
 
         @Override
-        public void addInput(Object inputValue) {
-            if (inputValue != null) {
-                this.accs[0] = this.accs[0] > Double.valueOf(String.valueOf(inputValue)) ? this.accs[0]
-                        : Double.valueOf(String.valueOf(inputValue));
-            }
-        }
-
-        @Override
-        public void mergeAccumulators(Iterable<double[]> accs) {
-            for (double[] acc : accs) {
-                this.accs[0] = this.accs[0] > acc[0] ? this.accs[0] : acc[0];
-            }
-        }
-
-        @Override
-        public double[] getAccumulators() {
-            return this.accs;
-        }
-
-        @Override
-        public Double extractOutput() {
-            return this.accs[0];
+        public Double apply(Double left, Double right) {
+            return left > right ? left : right;
         }
     }
 
