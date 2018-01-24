@@ -68,11 +68,11 @@ public class AggregateCombineFn
     public IndexedRecord extractOutput(AggregateAccumulator accumulator) {
         Schema.Parser parser = new Schema.Parser();
         Schema outputSchema = parser.parse(accumulator.outputSchemaStr);
-        IndexedRecord record = null;
+        IndexedRecord record = new GenericData.Record(outputSchema);
         for (AccumulatorElement accumulatorElement : accumulator.accumulatorElements) {
             IndexedRecord outputFieldRecord = accumulatorElement.extractOutput();
             if (outputFieldRecord != null) {
-                record = KeyValueUtils.mergeIndexedRecord(outputFieldRecord, new GenericData.Record(outputSchema),
+                record = KeyValueUtils.mergeIndexedRecord(outputFieldRecord, record,
                         outputSchema);
             }
         }
