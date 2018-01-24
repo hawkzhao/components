@@ -14,8 +14,9 @@ package org.talend.components.jdbc;
 
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -90,7 +91,7 @@ public class JDBCRowTestIT {
                 DBTestUtils.createTestSchema(), definition1, properties1);
 
         assertThat(records, hasSize(4));
-        Assert.assertEquals("4", records.get(3).get(0));
+        Assert.assertEquals(new Integer(4), records.get(3).get(0));
         Assert.assertEquals("momo", records.get(3).get(1));
     }
 
@@ -122,7 +123,7 @@ public class JDBCRowTestIT {
                 DBTestUtils.createTestSchema(), definition1, properties1);
 
         assertThat(records, hasSize(4));
-        Assert.assertEquals("4", records.get(3).get(0));
+        Assert.assertEquals(new Integer(4), records.get(3).get(0));
         Assert.assertEquals("momo", records.get(3).get(1));
     }
 
@@ -318,6 +319,30 @@ public class JDBCRowTestIT {
                 .setValue(Arrays.asList(PreparedStatementTable.Type.Int.name(), PreparedStatementTable.Type.String.name()));
         properties.preparedStatementTable.values.setValue(Arrays.<Object> asList(4, "momo"));
 
+        commonAssert(properties, schema);
+    }
+    
+    @SuppressWarnings("rawtypes")
+    @Test
+    public void test_basic_not_use_prepared_statement_as_output() throws Exception {
+        TJDBCRowDefinition definition = new TJDBCRowDefinition();
+        TJDBCRowProperties properties = DBTestUtils.createCommonJDBCRowProperties(allSetting, definition);
+
+        Schema schema = DBTestUtils.createTestSchema();
+        properties.main.schema.setValue(schema);
+        properties.updateOutputSchemas();
+
+        properties.tableSelection.tablename.setValue(DBTestUtils.getTablename());
+        properties.sql.setValue("insert into test values(4,'momo')");
+        properties.dieOnError.setValue(true);
+        randomCommit(properties);
+
+        properties.usePreparedStatement.setValue(false);
+
+        commonAssert(properties, schema);
+    }
+
+    private void commonAssert(TJDBCRowProperties properties, Schema schema) throws IOException {
         JDBCRowSink sink = new JDBCRowSink();
 
         sink.initialize(null, properties);
@@ -357,9 +382,9 @@ public class JDBCRowTestIT {
                 properties1);
 
         assertThat(records, hasSize(5));
-        Assert.assertEquals("4", records.get(3).get(0));
+        Assert.assertEquals(new Integer(4), records.get(3).get(0));
         Assert.assertEquals("momo", records.get(3).get(1));
-        Assert.assertEquals("4", records.get(4).get(0));
+        Assert.assertEquals(new Integer(4), records.get(4).get(0));
         Assert.assertEquals("momo", records.get(4).get(1));
     }
 
@@ -410,6 +435,7 @@ public class JDBCRowTestIT {
             Assert.assertNotNull(reject.get(3));
             assertThat(writer.getSuccessfulWrites(), empty());
 
+            writer.cleanWrites();
             IndexedRecord r2 = new GenericData.Record(properties.main.schema.getValue());
             r2.put(0, 5);
             r2.put(1, "xiaobai");
@@ -424,6 +450,7 @@ public class JDBCRowTestIT {
             Assert.assertNotNull(reject.get(3));
             assertThat(writer.getSuccessfulWrites(), empty());
 
+            writer.cleanWrites();
             writer.close();
         } finally {
             writer.close();
@@ -528,6 +555,7 @@ public class JDBCRowTestIT {
             resultSet.next();
             Assert.assertEquals(3, resultSet.getInt(1));
             Assert.assertEquals("dabao", resultSet.getString(2));
+            writer.cleanWrites();
             resultSet.close();
 
             IndexedRecord r2 = new GenericData.Record(properties.main.schema.getValue());
@@ -546,6 +574,7 @@ public class JDBCRowTestIT {
             resultSet.next();
             Assert.assertEquals(3, resultSet.getInt(1));
             Assert.assertEquals("dabao", resultSet.getString(2));
+            writer.cleanWrites();
             resultSet.close();
 
             writer.close();
