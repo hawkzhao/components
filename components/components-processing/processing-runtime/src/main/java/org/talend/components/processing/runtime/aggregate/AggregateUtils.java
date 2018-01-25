@@ -13,9 +13,8 @@ import org.apache.avro.generic.IndexedRecord;
 import org.apache.commons.lang3.StringUtils;
 import org.talend.components.adapter.beam.kv.SchemaGeneratorUtils;
 import org.talend.components.api.exception.error.ComponentsErrorCode;
-import org.talend.components.processing.definition.aggregate.AggregateColumnFunction;
-import org.talend.components.processing.definition.aggregate.AggregateFunctionProperties;
-import org.talend.components.processing.definition.aggregate.AggregateGroupProperties;
+import org.talend.components.processing.definition.aggregate.AggregateFieldOperationType;
+import org.talend.components.processing.definition.aggregate.AggregateOperationProperties;
 import org.talend.components.processing.definition.aggregate.AggregateProperties;
 import org.talend.daikon.avro.AvroUtils;
 import org.talend.daikon.exception.TalendRuntimeException;
@@ -23,51 +22,69 @@ import org.talend.daikon.exception.error.CommonErrorCodes;
 
 public class AggregateUtils {
 
-    public static Schema genOutputValueSchema(Schema inputSchema, AggregateProperties props) {
+    /**
+     * Based on incoming record's schema and the operation setting in {@code AggregateProperties},
+     * generate the output record's schema
+     * 
+     * @param inputRecordSchema
+     * @param props
+     * @return
+     */
+    public static Schema genOutputRecordSchema(Schema inputRecordSchema, AggregateProperties props) {
         Map<String, Set<Object>> container = new HashMap<>();
 
-        for (AggregateFunctionProperties aggFuncProps : props.filteredFunctions()) {
-            fillNewFieldTreeByAggFunc(container, aggFuncProps, inputSchema);
+        for (AggregateOperationProperties operationProps : props.filteredOperations()) {
+            fillNewFieldTreeByAggFunc(container, operationProps, inputRecordSchema);
         }
 
-        return SchemaGeneratorUtils.convertTreeToAvroSchema(container, TREE_ROOT_DEFAULT_VALUE, inputSchema);
+        return SchemaGeneratorUtils.convertTreeToAvroSchema(container, TREE_ROOT_DEFAULT_VALUE, inputRecordSchema);
     }
 
-    public static Schema genOutputFieldSchema(Schema inputSchema, AggregateFunctionProperties funcProps) {
+    /**
+     * Based on incoming record's schema and the operation setting in {@code AggregateProperties},
+     * generate the schema of one field in output record
+     *
+     * @param inputSchema
+     * @param operationProps
+     * @return
+     */
+    public static Schema genOutputFieldSchema(Schema inputSchema, AggregateOperationProperties operationProps) {
         Map<String, Set<Object>> container = new HashMap<>();
 
-        fillNewFieldTreeByAggFunc(container, funcProps, inputSchema);
+        fillNewFieldTreeByAggFunc(container, operationProps, inputSchema);
 
         return SchemaGeneratorUtils.convertTreeToAvroSchema(container, TREE_ROOT_DEFAULT_VALUE, inputSchema);
     }
 
-    private void fillNewFieldTreeByGroup(Map<String, Set<Object>> container, AggregateGroupProperties groupProps,
-            Schema inputSchema) {
-        fillNewFieldTree(container, groupProps.columnName.getValue(),
-                SchemaGeneratorUtils.retrieveFieldFromJsonPath(inputSchema, groupProps.columnName.getValue()));
+    /**
+     * Generate output field path,
+     * if the user did not set an output field path, use the input field name and the operation name
+     * if the user set an output field path, use the name of the last element in the path.
+     *
+     * @param operationProps
+     * @return
+     */
+    public static String genOutputFieldPath(AggregateOperationProperties operationProps) {
+        return StringUtils.isEmpty(operationProps.outputFieldPath.getValue())
+                ? genOutputFieldNameByOpt(operationProps.fieldPath.getValue(), operationProps.operation.getValue())
+                : operationProps.outputFieldPath.getValue();
     }
 
-    public static String genOutputColPath(AggregateFunctionProperties funcProps) {
-        return StringUtils.isEmpty(funcProps.outputColumnName.getValue())
-                ? genOutputColNameByFunc(funcProps.columnName.getValue(), funcProps.aggregateColumnFunction.getValue())
-                : funcProps.outputColumnName.getValue();
-    }
-
-    private static String genOutputColNameByFunc(String originalName, AggregateColumnFunction func) {
-        return originalName + "_" + func.toString();
+    private static String genOutputFieldNameByOpt(String originalName, AggregateFieldOperationType operationType) {
+        return originalName + "_" + operationType.toString();
     }
 
     private static void fillNewFieldTreeByAggFunc(Map<String, Set<Object>> container,
-            AggregateFunctionProperties funcProps, Schema inputSchema) {
-        String path = genOutputColPath(funcProps);
-        Schema.Field newField =
-                genField(SchemaGeneratorUtils.retrieveFieldFromJsonPath(inputSchema, funcProps.columnName.getValue()),
-                        funcProps);
+            AggregateOperationProperties operationProps, Schema inputSchema) {
+        String path = genOutputFieldPath(operationProps);
+        Schema.Field newField = genField(
+                SchemaGeneratorUtils.retrieveFieldFromJsonPath(inputSchema, operationProps.fieldPath.getValue()),
+                operationProps);
 
         fillNewFieldTree(container, path, newField);
     }
 
-    public static void fillNewFieldTree(Map<String, Set<Object>> container, String path, Schema.Field field) {
+    private static void fillNewFieldTree(Map<String, Set<Object>> container, String path, Schema.Field field) {
         String currentParent = TREE_ROOT_DEFAULT_VALUE;
         String[] splittedPath = path.split("\\.");
         for (int i = 0; i < splittedPath.length - 1; i++) {
@@ -87,37 +104,37 @@ public class AggregateUtils {
 
     /**
      * Generate new field,
-     * if user not set output column path, use input field name with function name
-     * if user set output column path, use it, but if it is path, use the last leaf node name
+     * if the user did not set an output field path, use the input field name and the operation name
+     * if the user set an output field path, use the name of the last element in the path.
      *
      * @param originalField
-     * @param funcProps
+     * @param operationProps
      * @return
      */
-    public static Schema.Field genField(Schema.Field originalField, AggregateFunctionProperties funcProps) {
-        Schema newFieldSchema = AvroUtils
-                .wrapAsNullable(genFieldType(originalField.schema(), funcProps.aggregateColumnFunction.getValue()));
-        String outputColPath = funcProps.outputColumnName.getValue();
+    public static Schema.Field genField(Schema.Field originalField, AggregateOperationProperties operationProps) {
+        Schema newFieldSchema =
+                AvroUtils.wrapAsNullable(genFieldType(originalField.schema(), operationProps.operation.getValue()));
+        String outputFieldPath = operationProps.outputFieldPath.getValue();
         String newFieldName;
-        if (StringUtils.isEmpty(outputColPath)) {
-            newFieldName = genOutputColNameByFunc(originalField.name(), funcProps.aggregateColumnFunction.getValue());
+        if (StringUtils.isEmpty(outputFieldPath)) {
+            newFieldName = genOutputFieldNameByOpt(originalField.name(), operationProps.operation.getValue());
         } else {
-            newFieldName =
-                    outputColPath.contains(".") ? StringUtils.substringAfterLast(outputColPath, ".") : outputColPath;
+            newFieldName = outputFieldPath.contains(".") ? StringUtils.substringAfterLast(outputFieldPath, ".")
+                    : outputFieldPath;
         }
         return new Schema.Field(newFieldName, newFieldSchema, originalField.doc(), originalField.defaultVal());
     }
 
     /**
      * Generate new field type,
-     * assume output column type according to input column type and aggregate function
+     * assume output field type according to input field type and operation type
      *
      * @param fieldType
-     * @param funcType
+     * @param operationType
      * @return
      */
-    public static Schema genFieldType(Schema fieldType, AggregateColumnFunction funcType) {
-        switch (funcType) {
+    public static Schema genFieldType(Schema fieldType, AggregateFieldOperationType operationType) {
+        switch (operationType) {
         case LIST: {
             return Schema.createArray(fieldType);
         }
@@ -130,7 +147,7 @@ public class AggregateUtils {
                 TalendRuntimeException.build(ComponentsErrorCode.SCHEMA_TYPE_MISMATCH).setAndThrow("aggregate",
                         "int/long/float/double", fieldType.getType().getName());
             }
-            switch (funcType) {
+            switch (operationType) {
             case SUM:
                 if (AvroUtils.isSameType(fieldType, AvroUtils._int())) {
                     return AvroUtils._long();
@@ -151,6 +168,13 @@ public class AggregateUtils {
         return fieldType;
     }
 
+    /**
+     * Set the value to record based on the fieldPath, if the path is wrong nothing will be added on record
+     *
+     * @param fieldPath
+     * @param value
+     * @param record
+     */
     public static void setField(String fieldPath, Object value, IndexedRecord record) {
         String[] path = fieldPath.split("\\.");
         if (path.length <= 0) {

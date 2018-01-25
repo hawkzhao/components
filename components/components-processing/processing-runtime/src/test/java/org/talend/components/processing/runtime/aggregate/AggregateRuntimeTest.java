@@ -21,9 +21,9 @@ import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.junit.Rule;
 import org.junit.Test;
-import org.talend.components.processing.definition.aggregate.AggregateColumnFunction;
-import org.talend.components.processing.definition.aggregate.AggregateFunctionProperties;
-import org.talend.components.processing.definition.aggregate.AggregateGroupProperties;
+import org.talend.components.processing.definition.aggregate.AggregateFieldOperationType;
+import org.talend.components.processing.definition.aggregate.AggregateGroupByProperties;
+import org.talend.components.processing.definition.aggregate.AggregateOperationProperties;
 import org.talend.components.processing.definition.aggregate.AggregateProperties;
 
 public class AggregateRuntimeTest {
@@ -396,31 +396,32 @@ public class AggregateRuntimeTest {
 
     private void addIntoGroup(AggregateProperties props, List<String> groupPaths) {
         for (String groupPath : groupPaths) {
-            AggregateGroupProperties groupProps = new AggregateGroupProperties("group");
+            AggregateGroupByProperties groupProps = new AggregateGroupByProperties("group");
             groupProps.init();
-            groupProps.columnName.setValue(groupPath);
+            groupProps.fieldPath.setValue(groupPath);
             props.groupBy.addRow(groupProps);
         }
     }
 
-    private void addIntoFunction(AggregateProperties props, AggregateColumnFunction func, List<String> columnPaths) {
-        for (String columnPath : columnPaths) {
-            AggregateFunctionProperties funcProps = new AggregateFunctionProperties("function");
-            funcProps.init();
-            funcProps.columnName.setValue(columnPath);
-            funcProps.aggregateColumnFunction.setValue(func);
-            props.functions.addRow(funcProps);
+    private void addIntoOperations(AggregateProperties props, AggregateFieldOperationType func,
+            List<String> fieldPaths) {
+        for (String fieldPath : fieldPaths) {
+            AggregateOperationProperties operationProps = new AggregateOperationProperties("operation");
+            operationProps.init();
+            operationProps.fieldPath.setValue(fieldPath);
+            operationProps.operation.setValue(func);
+            props.operations.addRow(operationProps);
         }
     }
 
-    private void addIntoFunction(AggregateProperties props, AggregateColumnFunction func, String columnPath,
-            String outputColumnPath) {
-        AggregateFunctionProperties funcProps = new AggregateFunctionProperties("function");
-        funcProps.init();
-        funcProps.columnName.setValue(columnPath);
-        funcProps.aggregateColumnFunction.setValue(func);
-        funcProps.outputColumnName.setValue(outputColumnPath);
-        props.functions.addRow(funcProps);
+    private void addIntoOperations(AggregateProperties props, AggregateFieldOperationType func, String fieldPath,
+            String outputFieldPath) {
+        AggregateOperationProperties operationProps = new AggregateOperationProperties("operation");
+        operationProps.init();
+        operationProps.fieldPath.setValue(fieldPath);
+        operationProps.operation.setValue(func);
+        operationProps.outputFieldPath.setValue(outputFieldPath);
+        props.operations.addRow(operationProps);
     }
 
     @Test
@@ -440,17 +441,21 @@ public class AggregateRuntimeTest {
 
         addIntoGroup(props, Arrays.asList(".g1", ".g2"));
 
-        addIntoFunction(props, AggregateColumnFunction.MIN, Arrays.asList(".int1", ".long1", ".float1", ".double1"));
+        addIntoOperations(props, AggregateFieldOperationType.MIN,
+                Arrays.asList(".int1", ".long1", ".float1", ".double1"));
 
-        addIntoFunction(props, AggregateColumnFunction.MAX, Arrays.asList(".int1", ".long1", ".float1", ".double1"));
+        addIntoOperations(props, AggregateFieldOperationType.MAX,
+                Arrays.asList(".int1", ".long1", ".float1", ".double1"));
 
-        addIntoFunction(props, AggregateColumnFunction.AVG, Arrays.asList(".int1", ".long1", ".float1", ".double1"));
+        addIntoOperations(props, AggregateFieldOperationType.AVG,
+                Arrays.asList(".int1", ".long1", ".float1", ".double1"));
 
-        addIntoFunction(props, AggregateColumnFunction.SUM, Arrays.asList(".int1", ".long1", ".float1", ".double1"));
+        addIntoOperations(props, AggregateFieldOperationType.SUM,
+                Arrays.asList(".int1", ".long1", ".float1", ".double1"));
 
-        addIntoFunction(props, AggregateColumnFunction.LIST, ".g2", "g2_list_value");
+        addIntoOperations(props, AggregateFieldOperationType.LIST, ".g2", "g2_list_value");
 
-        addIntoFunction(props, AggregateColumnFunction.COUNT, ".g1", "g1_count_number");
+        addIntoOperations(props, AggregateFieldOperationType.COUNT, ".g1", "g1_count_number");
 
         aggregateRuntime.initialize(null, props);
 

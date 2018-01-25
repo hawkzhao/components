@@ -26,55 +26,55 @@ public class AggregateProperties extends FixedConnectorsComponentProperties {
 
     public SchemaProperties schemaFlow = new SchemaProperties("schemaFlow");
 
-    public PropertiesList<AggregateGroupProperties> groupBy =
-            new PropertiesList<>("groupBy", new PropertiesList.NestedPropertiesFactory<AggregateGroupProperties>() {
+    public PropertiesList<AggregateGroupByProperties> groupBy =
+            new PropertiesList<>("groupBy", new PropertiesList.NestedPropertiesFactory<AggregateGroupByProperties>() {
 
                 @Override
-                public AggregateGroupProperties createAndInit(String name) {
-                    return (AggregateGroupProperties) new AggregateGroupProperties(name).init();
+                public AggregateGroupByProperties createAndInit(String name) {
+                    return (AggregateGroupByProperties) new AggregateGroupByProperties(name).init();
                 }
             });
 
-    public PropertiesList<AggregateFunctionProperties> functions = new PropertiesList<>("functions",
-            new PropertiesList.NestedPropertiesFactory<AggregateFunctionProperties>() {
+    public PropertiesList<AggregateOperationProperties> operations = new PropertiesList<>("operations",
+            new PropertiesList.NestedPropertiesFactory<AggregateOperationProperties>() {
 
                 @Override
-                public AggregateFunctionProperties createAndInit(String name) {
-                    return (AggregateFunctionProperties) new AggregateFunctionProperties(name).init();
+                public AggregateOperationProperties createAndInit(String name) {
+                    return (AggregateOperationProperties) new AggregateOperationProperties(name).init();
                 }
             });
 
-    public List<AggregateGroupProperties> filteredGroupBy() {
-        List<AggregateGroupProperties> filteredGroupBy = new ArrayList<>();
-        for (AggregateGroupProperties groupProps : groupBy.getPropertiesList()) {
-            String colName = groupProps.columnName.getValue();
-            if (StringUtils.isEmpty(colName)) {
+    public List<AggregateGroupByProperties> filteredGroupBy() {
+        List<AggregateGroupByProperties> filteredGroupBy = new ArrayList<>();
+        for (AggregateGroupByProperties groupProps : groupBy.getPropertiesList()) {
+            String fieldPath = groupProps.fieldPath.getValue();
+            if (StringUtils.isEmpty(fieldPath)) {
                 continue;
             }
-            // TODO the incoming column name will start with ".", it's for avpath, consider it after
-            if (colName.startsWith(".")) {
-                groupProps.columnName.setValue(colName.substring(1));
+            // TODO the incoming field name will start with ".", it's for avpath, consider it after
+            if (fieldPath.startsWith(".")) {
+                groupProps.fieldPath.setValue(fieldPath.substring(1));
             }
             filteredGroupBy.add(groupProps);
         }
         return filteredGroupBy;
     }
 
-    public List<AggregateFunctionProperties> filteredFunctions() {
-        List<AggregateFunctionProperties> filteredFunctions = new ArrayList<>();
-        for (AggregateFunctionProperties funcProps : functions.getPropertiesList()) {
-            String colName = funcProps.columnName.getValue();
-            if (StringUtils.isEmpty(colName)) {
+    public List<AggregateOperationProperties> filteredOperations() {
+        List<AggregateOperationProperties> filteredOperations = new ArrayList<>();
+        for (AggregateOperationProperties funcProps : operations.getPropertiesList()) {
+            String fieldPath = funcProps.fieldPath.getValue();
+            if (StringUtils.isEmpty(fieldPath)) {
                 continue;
             }
-            // TODO the incoming column name will start with ".", it's for avpath, consider it after
-            if (colName.startsWith(".")) {
-                funcProps.columnName.setValue(colName.substring(1));
+            // TODO the incoming field name will start with ".", it's for avpath, consider it after
+            if (fieldPath.startsWith(".")) {
+                funcProps.fieldPath.setValue(fieldPath.substring(1));
             }
-            // TODO consider avpath for funcProps.outputColumnName?
-            filteredFunctions.add(funcProps);
+            // TODO consider avpath for funcProps.outputFieldPath?
+            filteredOperations.add(funcProps);
         }
-        return filteredFunctions;
+        return filteredOperations;
     }
 
     public AggregateProperties(String name) {
@@ -86,9 +86,9 @@ public class AggregateProperties extends FixedConnectorsComponentProperties {
         super.setupLayout();
         Form mainForm = new Form(this, Form.MAIN);
         mainForm.addRow(Widget.widget(groupBy).setWidgetType(Widget.NESTED_PROPERTIES).setConfigurationValue(
-                Widget.NESTED_PROPERTIES_TYPE_OPTION, "filter"));
-        mainForm.addRow(Widget.widget(functions).setWidgetType(Widget.NESTED_PROPERTIES).setConfigurationValue(
-                Widget.NESTED_PROPERTIES_TYPE_OPTION, "filter"));
+                Widget.NESTED_PROPERTIES_TYPE_OPTION, "filter")); // TODO correct the value of filter when it available
+        mainForm.addRow(Widget.widget(operations).setWidgetType(Widget.NESTED_PROPERTIES).setConfigurationValue(
+                Widget.NESTED_PROPERTIES_TYPE_OPTION, "filter")); // TODO correct the value of filter when it available
     }
 
     @Override
@@ -96,8 +96,8 @@ public class AggregateProperties extends FixedConnectorsComponentProperties {
         super.setupProperties();
         groupBy.init();
         groupBy.createAndAddRow();
-        functions.init();
-        functions.createAndAddRow();
+        operations.init();
+        operations.createAndAddRow();
     }
 
     @Override

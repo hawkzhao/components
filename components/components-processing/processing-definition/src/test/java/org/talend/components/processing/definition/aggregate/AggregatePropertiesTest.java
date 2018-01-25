@@ -37,10 +37,10 @@ public class AggregatePropertiesTest {
     }
 
     @Test
-    public void testVisible() throws Throwable {
+    public void testVisible() {
         Form main = properties.getForm(Form.MAIN);
         assertTrue(main.getWidget(properties.groupBy).isVisible());
-        assertTrue(main.getWidget(properties.functions).isVisible());
+        assertTrue(main.getWidget(properties.operations).isVisible());
     }
 
     @Test
@@ -53,7 +53,7 @@ public class AggregatePropertiesTest {
         Form main = properties.getForm(Form.MAIN);
         Collection<Widget> mainWidgets = main.getWidgets();
 
-        List<String> ALL = Arrays.asList(properties.groupBy.getName(), properties.functions.getName());
+        List<String> ALL = Arrays.asList(properties.groupBy.getName(), properties.operations.getName());
 
         Assert.assertThat(main, notNullValue());
         Assert.assertThat(mainWidgets, hasSize(ALL.size()));

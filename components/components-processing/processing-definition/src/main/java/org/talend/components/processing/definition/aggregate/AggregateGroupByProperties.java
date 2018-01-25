@@ -6,21 +6,21 @@ import org.talend.daikon.properties.presentation.Widget;
 import org.talend.daikon.properties.property.Property;
 import org.talend.daikon.properties.property.PropertyFactory;
 
-public class AggregateGroupProperties extends PropertiesImpl {
+public class AggregateGroupByProperties extends PropertiesImpl {
 
-    public AggregateGroupProperties(String name) {
+    public AggregateGroupByProperties(String name) {
         super(name);
     }
 
     /**
-     * This enum will be filled with the name of the input columns.
+     * This enum will be filled with the name of the input field.
      */
-    public Property<String> columnName = PropertyFactory.newString("columnName", "").setRequired();
+    public Property<String> fieldPath = PropertyFactory.newString("fieldPath", "").setRequired();
 
     @Override
     public void setupLayout() {
         super.setupLayout();
         Form mainForm = new Form(this, Form.MAIN);
-        mainForm.addRow(Widget.widget(columnName).setWidgetType(Widget.DATALIST_WIDGET_TYPE));
+        mainForm.addRow(Widget.widget(fieldPath).setWidgetType(Widget.DATALIST_WIDGET_TYPE));
     }
 }

@@ -11,8 +11,8 @@ import org.apache.avro.generic.IndexedRecord;
 import org.apache.beam.sdk.transforms.Combine;
 import org.talend.components.adapter.beam.kv.KeyValueUtils;
 import org.talend.components.adapter.beam.kv.SchemaGeneratorUtils;
-import org.talend.components.processing.definition.aggregate.AggregateColumnFunction;
-import org.talend.components.processing.definition.aggregate.AggregateFunctionProperties;
+import org.talend.components.processing.definition.aggregate.AggregateFieldOperationType;
+import org.talend.components.processing.definition.aggregate.AggregateOperationProperties;
 import org.talend.components.processing.definition.aggregate.AggregateProperties;
 import org.talend.daikon.avro.AvroUtils;
 import org.talend.daikon.exception.TalendRuntimeException;
@@ -29,22 +29,17 @@ public class AggregateCombineFn
 
     @Override
     public AggregateAccumulator createAccumulator() {
-        AggregateAccumulator accumulator = new AggregateAccumulator();
-        List<AccumulatorElement> accs = new ArrayList();
-        for (AggregateFunctionProperties funcProps : properties.filteredFunctions()) {
-            accs.add(new AccumulatorElement(funcProps));
-        }
-        accumulator.accumulatorElements = accs;
-        return accumulator;
+        return new AggregateAccumulator(properties);
     }
 
     @Override
-    public AggregateAccumulator addInput(AggregateAccumulator accumulator, IndexedRecord input) {
-        if (accumulator.outputSchemaStr == null) {
-            accumulator.outputSchemaStr = AggregateUtils.genOutputValueSchema(input.getSchema(), properties).toString();
+    public AggregateAccumulator addInput(AggregateAccumulator accumulator, IndexedRecord inputRecord) {
+        if (accumulator.outputRecordSchemaStr == null) {
+            accumulator.outputRecordSchemaStr =
+                    AggregateUtils.genOutputRecordSchema(inputRecord.getSchema(), properties).toString();
         }
         for (AccumulatorElement accumulatorElement : accumulator.accumulatorElements) {
-            accumulatorElement.addInput(input);
+            accumulatorElement.addInput(inputRecord);
         }
         return accumulator;
     }
@@ -52,11 +47,11 @@ public class AggregateCombineFn
     @Override
     public AggregateAccumulator mergeAccumulators(Iterable<AggregateAccumulator> accumulators) {
         AggregateAccumulator deltaAcc = createAccumulator();
-        for (int idx = 0; idx < properties.filteredFunctions().size(); idx++) {
+        for (int idx = 0; idx < properties.filteredOperations().size(); idx++) {
             List accs = new ArrayList();
             for (AggregateAccumulator accumulator : accumulators) {
-                if (deltaAcc.outputSchemaStr == null) {
-                    deltaAcc.outputSchemaStr = accumulator.outputSchemaStr;
+                if (deltaAcc.outputRecordSchemaStr == null) {
+                    deltaAcc.outputRecordSchemaStr = accumulator.outputRecordSchemaStr;
                 }
                 accs.add(accumulator.accumulatorElements.get(idx));
             }
@@ -68,62 +63,71 @@ public class AggregateCombineFn
     @Override
     public IndexedRecord extractOutput(AggregateAccumulator accumulator) {
         Schema.Parser parser = new Schema.Parser();
-        Schema outputSchema = parser.parse(accumulator.outputSchemaStr);
-        IndexedRecord record = new GenericData.Record(outputSchema);
+        Schema outputRecordSchema = parser.parse(accumulator.outputRecordSchemaStr);
+        IndexedRecord outputRecord = new GenericData.Record(outputRecordSchema);
         for (AccumulatorElement accumulatorElement : accumulator.accumulatorElements) {
             IndexedRecord outputFieldRecord = accumulatorElement.extractOutput();
             if (outputFieldRecord != null) {
-                record = KeyValueUtils.mergeIndexedRecord(outputFieldRecord, record, outputSchema);
+                outputRecord = KeyValueUtils.mergeIndexedRecord(outputFieldRecord, outputRecord, outputRecordSchema);
             }
         }
-        return record;
+        return outputRecord;
     }
 
     // Implements Serializable to make sure use SerializableCoder
     public static class AggregateAccumulator implements Serializable {
 
         // for merge the final output record, init by first coming record
-        private String outputSchemaStr;
+        private String outputRecordSchemaStr;
 
-        // based on the defined func group
-        private List<AccumulatorElement> accumulatorElements = new ArrayList();
+        // based on the defined operationType group
+        private List<AccumulatorElement> accumulatorElements;
+
+        public AggregateAccumulator(AggregateProperties properties) {
+            List<AccumulatorElement> accs = new ArrayList();
+            for (AggregateOperationProperties funcProps : properties.filteredOperations()) {
+                accs.add(new AccumulatorElement(funcProps));
+            }
+            this.accumulatorElements = accs;
+        }
     }
 
     public static class AccumulatorElement implements Serializable {
 
-        AggregateFunctionProperties funcProps;
+        AggregateOperationProperties optProps;
 
-        String inputColPath;
+        String inputFieldPath;
 
-        String outputColPath;
+        String outputFieldPath;
 
-        AggregateColumnFunction func;
+        AggregateFieldOperationType operationType;
 
         // init by first coming record
         AccumulatorFn accumulatorFn;
 
         String outputFieldSchemaStr;
 
-        public AccumulatorElement(AggregateFunctionProperties funcProps) {
-            this.funcProps = funcProps;
-            this.inputColPath = funcProps.columnName.getValue();
-            this.outputColPath = AggregateUtils.genOutputColPath(funcProps);
-            this.func = funcProps.aggregateColumnFunction.getValue();
+        public AccumulatorElement(AggregateOperationProperties optProps) {
+            this.optProps = optProps;
+            this.inputFieldPath = optProps.fieldPath.getValue();
+            this.outputFieldPath = AggregateUtils.genOutputFieldPath(optProps);
+            this.operationType = optProps.operation.getValue();
         }
 
         public void addInput(IndexedRecord inputRecord) {
             if (this.outputFieldSchemaStr == null) {
                 this.outputFieldSchemaStr =
-                        AggregateUtils.genOutputFieldSchema(inputRecord.getSchema(), funcProps).toString();
+                        AggregateUtils.genOutputFieldSchema(inputRecord.getSchema(), optProps).toString();
             }
-            Object field = KeyValueUtils.getField(inputColPath, inputRecord);
+            Object inputField = KeyValueUtils.getField(inputFieldPath, inputRecord);
             if (accumulatorFn == null) {
-                Schema inputColSchema =
-                        SchemaGeneratorUtils.retrieveFieldFromJsonPath(inputRecord.getSchema(), inputColPath).schema();
-                accumulatorFn = getProperCombineFn(inputColSchema, func);
+                Schema inputFieldSchema = SchemaGeneratorUtils
+                        .retrieveFieldFromJsonPath(inputRecord.getSchema(), this.inputFieldPath)
+                        .schema();
+                accumulatorFn = getProperCombineFn(inputFieldSchema, operationType);
                 accumulatorFn.createAccumulator();
             }
-            accumulatorFn.addInput(field);
+            accumulatorFn.addInput(inputField);
         }
 
         public void mergeAccumulators(Iterable<AccumulatorElement> accumulators) {
@@ -149,46 +153,46 @@ public class AggregateCombineFn
             Schema.Parser parser = new Schema.Parser();
             Schema outputFieldSchema = parser.parse(outputFieldSchemaStr);
             GenericData.Record outputFieldRecord = new GenericData.Record(outputFieldSchema);
-            AggregateUtils.setField(outputColPath, this.accumulatorFn.extractOutput(), outputFieldRecord);
+            AggregateUtils.setField(outputFieldPath, this.accumulatorFn.extractOutput(), outputFieldRecord);
             return outputFieldRecord;
         }
 
-        private AccumulatorFn getProperCombineFn(Schema inputColSchema, AggregateColumnFunction func) {
-            inputColSchema = AvroUtils.unwrapIfNullable(inputColSchema);
-            switch (func) {
+        private AccumulatorFn getProperCombineFn(Schema inputFieldSchema, AggregateFieldOperationType operationType) {
+            inputFieldSchema = AvroUtils.unwrapIfNullable(inputFieldSchema);
+            switch (operationType) {
 
             case LIST:
                 return new ListAccumulatorFn();
             case COUNT:
                 return new CountAccumulatorFn();
             case SUM:
-                if (AvroUtils.isSameType(inputColSchema, AvroUtils._int())
-                        || AvroUtils.isSameType(inputColSchema, AvroUtils._long())) {
+                if (AvroUtils.isSameType(inputFieldSchema, AvroUtils._int())
+                        || AvroUtils.isSameType(inputFieldSchema, AvroUtils._long())) {
                     return new SumLongAccumulatorFn();
-                } else if (AvroUtils.isSameType(inputColSchema, AvroUtils._float())
-                        || AvroUtils.isSameType(inputColSchema, AvroUtils._double())) {
+                } else if (AvroUtils.isSameType(inputFieldSchema, AvroUtils._float())
+                        || AvroUtils.isSameType(inputFieldSchema, AvroUtils._double())) {
                     return new SumDoubleAccumulatorFn();
                 }
             case AVG:
                 return new AvgAccumulatorFn();
             case MIN:
-                if (AvroUtils.isSameType(inputColSchema, AvroUtils._int())) {
+                if (AvroUtils.isSameType(inputFieldSchema, AvroUtils._int())) {
                     return new MinIntegerAccumulatorFn();
-                } else if (AvroUtils.isSameType(inputColSchema, AvroUtils._long())) {
+                } else if (AvroUtils.isSameType(inputFieldSchema, AvroUtils._long())) {
                     return new MinLongAccumulatorFn();
-                } else if (AvroUtils.isSameType(inputColSchema, AvroUtils._float())) {
+                } else if (AvroUtils.isSameType(inputFieldSchema, AvroUtils._float())) {
                     return new MinFloatAccumulatorFn();
-                } else if (AvroUtils.isSameType(inputColSchema, AvroUtils._double())) {
+                } else if (AvroUtils.isSameType(inputFieldSchema, AvroUtils._double())) {
                     return new MinDoubleAccumulatorFn();
                 }
             case MAX:
-                if (AvroUtils.isSameType(inputColSchema, AvroUtils._int())) {
+                if (AvroUtils.isSameType(inputFieldSchema, AvroUtils._int())) {
                     return new MaxIntegerAccumulatorFn();
-                } else if (AvroUtils.isSameType(inputColSchema, AvroUtils._long())) {
+                } else if (AvroUtils.isSameType(inputFieldSchema, AvroUtils._long())) {
                     return new MaxLongAccumulatorFn();
-                } else if (AvroUtils.isSameType(inputColSchema, AvroUtils._float())) {
+                } else if (AvroUtils.isSameType(inputFieldSchema, AvroUtils._float())) {
                     return new MaxFloatAccumulatorFn();
-                } else if (AvroUtils.isSameType(inputColSchema, AvroUtils._double())) {
+                } else if (AvroUtils.isSameType(inputFieldSchema, AvroUtils._double())) {
                     return new MaxDoubleAccumulatorFn();
                 }
             }
