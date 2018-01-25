@@ -1,5 +1,6 @@
 package org.talend.components.processing.runtime.aggregate;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -78,7 +79,8 @@ public class AggregateCombineFn
         return record;
     }
 
-    public static class AggregateAccumulator {
+    // Implements Serializable to make sure use SerializableCoder
+    public static class AggregateAccumulator implements Serializable {
 
         // for merge the final output record, init by first coming record
         private String outputSchemaStr;
@@ -87,7 +89,7 @@ public class AggregateCombineFn
         private List<AccumulatorElement> accumulatorElements = new ArrayList();
     }
 
-    public static class AccumulatorElement {
+    public static class AccumulatorElement implements Serializable {
 
         AggregateFunctionProperties funcProps;
 
@@ -195,7 +197,7 @@ public class AggregateCombineFn
         }
     }
 
-    public interface AccumulatorFn<AccumT, OutputT> {
+    public interface AccumulatorFn<AccumT, OutputT> extends Serializable {
 
         public void createAccumulator();
 
