@@ -21,6 +21,7 @@ import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericData.Record;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.avro.generic.IndexedRecord;
+import org.apache.avro.util.Utf8;
 import org.talend.daikon.avro.AvroUtils;
 
 public class KeyValueUtils {
@@ -245,7 +246,13 @@ public class KeyValueUtils {
             } else {
                 // if we are on a object, then this is or the expected value of an error.
                 if (i == path.length - 1) {
-                    return inputValue;
+                    if (inputValue == null) {
+                        return inputValue;
+                    } else if (inputValue instanceof Utf8) {
+                        return ((Utf8) inputValue).toString();
+                    } else {
+                        return inputValue;
+                    }
                 } else {
                     // No need to go further, return an empty element
                     return null;

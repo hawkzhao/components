@@ -169,8 +169,10 @@ public class SchemaGeneratorUtils {
                 }
             }
         } else {
-            TalendRuntimeException.build(CommonErrorCodes.UNEXPECTED_ARGUMENT).setAndThrow(tree.keySet().toString(),
-                    elementToGenerate);
+            if (!TREE_ROOT_DEFAULT_VALUE.equals(elementToGenerate)) {
+                TalendRuntimeException.build(CommonErrorCodes.UNEXPECTED_ARGUMENT).setAndThrow(tree.keySet().toString(),
+                        elementToGenerate);
+            }
         }
 
         try {
