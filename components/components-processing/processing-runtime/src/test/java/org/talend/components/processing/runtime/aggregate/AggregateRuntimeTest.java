@@ -7,10 +7,18 @@ import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.avro.generic.IndexedRecord;
+import org.apache.beam.runners.spark.SparkContextOptions;
+import org.apache.beam.runners.spark.SparkRunner;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.junit.Rule;
 import org.junit.Test;
 import org.talend.components.processing.definition.aggregate.AggregateColumnFunction;
@@ -416,7 +424,16 @@ public class AggregateRuntimeTest {
     }
 
     @Test
-    public void basicTest() {
+    public void basicTest_Local() {
+        basicTest(pipeline);
+    }
+
+    @Test
+    public void basicTest_Spark() {
+        basicTest(createSparkRunnerPipeline());
+    }
+
+    public void basicTest(Pipeline pipeline) {
         AggregateRuntime aggregateRuntime = new AggregateRuntime();
         AggregateProperties props = new AggregateProperties("aggregate");
         props.init();
@@ -441,5 +458,21 @@ public class AggregateRuntimeTest {
         PAssert.that(result).containsInAnyOrder(minIntResList);
 
         pipeline.run();
+    }
+
+    private Pipeline createSparkRunnerPipeline() {
+        PipelineOptions o = PipelineOptionsFactory.create();
+        SparkContextOptions options = o.as(SparkContextOptions.class);
+
+        SparkConf conf = new SparkConf();
+        conf.setAppName("Aggregate");
+        conf.setMaster("local[2]");
+        conf.set("spark.driver.allowMultipleContexts", "true");
+        JavaSparkContext jsc = new JavaSparkContext(new SparkContext(conf));
+        options.setProvidedSparkContext(jsc);
+        options.setUsesProvidedSparkContext(true);
+        options.setRunner(SparkRunner.class);
+
+        return Pipeline.create(options);
     }
 }
