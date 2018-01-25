@@ -438,19 +438,19 @@ public class AggregateRuntimeTest {
         AggregateProperties props = new AggregateProperties("aggregate");
         props.init();
 
-        addIntoGroup(props, Arrays.asList("g1", "g2"));
+        addIntoGroup(props, Arrays.asList(".g1", ".g2"));
 
-        addIntoFunction(props, AggregateColumnFunction.MIN, Arrays.asList("int1", "long1", "float1", "double1"));
+        addIntoFunction(props, AggregateColumnFunction.MIN, Arrays.asList(".int1", ".long1", ".float1", ".double1"));
 
-        addIntoFunction(props, AggregateColumnFunction.MAX, Arrays.asList("int1", "long1", "float1", "double1"));
+        addIntoFunction(props, AggregateColumnFunction.MAX, Arrays.asList(".int1", ".long1", ".float1", ".double1"));
 
-        addIntoFunction(props, AggregateColumnFunction.AVG, Arrays.asList("int1", "long1", "float1", "double1"));
+        addIntoFunction(props, AggregateColumnFunction.AVG, Arrays.asList(".int1", ".long1", ".float1", ".double1"));
 
-        addIntoFunction(props, AggregateColumnFunction.SUM, Arrays.asList("int1", "long1", "float1", "double1"));
+        addIntoFunction(props, AggregateColumnFunction.SUM, Arrays.asList(".int1", ".long1", ".float1", ".double1"));
 
-        addIntoFunction(props, AggregateColumnFunction.LIST, "g2", "g2_list_value");
+        addIntoFunction(props, AggregateColumnFunction.LIST, ".g2", "g2_list_value");
 
-        addIntoFunction(props, AggregateColumnFunction.COUNT, "g1", "g1_count_number");
+        addIntoFunction(props, AggregateColumnFunction.COUNT, ".g1", "g1_count_number");
 
         aggregateRuntime.initialize(null, props);
 

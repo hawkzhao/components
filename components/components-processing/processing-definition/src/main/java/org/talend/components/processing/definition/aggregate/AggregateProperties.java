@@ -47,8 +47,13 @@ public class AggregateProperties extends FixedConnectorsComponentProperties {
     public List<AggregateGroupProperties> filteredGroupBy() {
         List<AggregateGroupProperties> filteredGroupBy = new ArrayList<>();
         for (AggregateGroupProperties groupProps : groupBy.getPropertiesList()) {
-            if (StringUtils.isEmpty(groupProps.columnName.getValue())) {
+            String colName = groupProps.columnName.getValue();
+            if (StringUtils.isEmpty(colName)) {
                 continue;
+            }
+            // TODO the incoming column name will start with ".", it's for avpath, consider it after
+            if (colName.startsWith(".")) {
+                groupProps.columnName.setValue(colName.substring(1));
             }
             filteredGroupBy.add(groupProps);
         }
@@ -58,9 +63,15 @@ public class AggregateProperties extends FixedConnectorsComponentProperties {
     public List<AggregateFunctionProperties> filteredFunctions() {
         List<AggregateFunctionProperties> filteredFunctions = new ArrayList<>();
         for (AggregateFunctionProperties funcProps : functions.getPropertiesList()) {
-            if (StringUtils.isEmpty(funcProps.columnName.getValue())) {
+            String colName = funcProps.columnName.getValue();
+            if (StringUtils.isEmpty(colName)) {
                 continue;
             }
+            // TODO the incoming column name will start with ".", it's for avpath, consider it after
+            if (colName.startsWith(".")) {
+                funcProps.columnName.setValue(colName.substring(1));
+            }
+            // TODO consider avpath for funcProps.outputColumnName?
             filteredFunctions.add(funcProps);
         }
         return filteredFunctions;
