@@ -101,17 +101,15 @@
             <artifactId>rxjava</artifactId>
             <version>${rx.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>org.powermock</groupId>
             <artifactId>powermock-api-mockito</artifactId>
-            <version>1.6.5</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.powermock</groupId>
             <artifactId>powermock-module-junit4</artifactId>
-            <version>1.6.5</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -185,7 +183,9 @@
                                 <Import-Package>
                                     !org.apache.logging.log4j.*,!com.couchbase.client.deps.io.netty.internal.tcnative,!org.conscrypt,!com.barchart.udt,!com.barchart.udt.nio,!com.google.protobuf,!com.jcraft.jzlib,!com.sun.*,!sun.*,!gnu.io,!javassist,!org.jboss.*,!org.joda.*,!org.apache.logging.log4j,!org.apache.tomcat,!org.apache.tomcat.jni,!org.bouncycastle.*,!org.eclipse.*,*
                                 </Import-Package>
-                                <Export-Package>!com.couchbase.client.deps,org.talend.components.couchbase,org.talend.components.couchbase.input,org.talend.components.couchbase.output</Export-Package>
+                                <Export-Package>
+                                    !com.couchbase.client.deps,org.talend.components.couchbase,org.talend.components.couchbase.input,org.talend.components.couchbase.output
+                                </Export-Package>
                                 <Embed-Dependency>*;scope=compile|runtime;inline=false;artifactId=!components*
                                 </Embed-Dependency>
                                 <Include-Resource>
