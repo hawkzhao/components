@@ -147,8 +147,9 @@
         <powermock-module-junit4.version>1.6.5</powermock-module-junit4.version>
         <slf4.version>1.7.25</slf4.version>
         <snappy-java.version>1.1.1.3</snappy-java.version>
-        <spring-boot-starter.version>1.5.1.RELEASE</spring-boot-starter.version>
+        <spring-boot.version>1.5.1.RELEASE</spring-boot.version>
         <spring-test.version>4.3.6.RELEASE</spring-test.version>
+        <jline.version>2.12</jline.version>
         <stax2-api.version>3.1.4</stax2-api.version>
         <talend_file_enhanced_20070724.version>6.0.0</talend_file_enhanced_20070724.version>
         <talendcsv.version>6.0.0</talendcsv.version>
@@ -956,9 +957,25 @@
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter</artifactId>
-                <version>${spring-boot-starter.version}</version>
+                <artifactId>spring-boot</artifactId>
+                <version>${spring-boot.version}</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter</artifactId>
+                <version>${spring-boot.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-web</artifactId>
+                <version>${spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>jline</groupId>
+                <artifactId>jline</artifactId>
+                <version>${jline.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.talend.libraries</groupId>
