@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.talend.components</groupId>
@@ -14,6 +15,13 @@
     </properties>
 
     <modules>
+        <module>components-couchbase</module>
+        <module>components-kinesis</module>
+        <module>components-marklogic</module>
+        <module>components-googledrive</module>
+        <!-- Slow-building components are built last. -->
+        <module>components-salesforce</module>
+        <module>components-snowflake</module>
         <module>components-azurestorage</module>
         <module>components-fileio</module>
         <module>components-jms</module>
@@ -31,12 +39,5 @@
         <module>components-marketo</module>
         <module>components-netsuite</module>
         <module>components-hadoopcluster</module>
-        <module>components-couchbase</module>
-        <module>components-kinesis</module>
-        <module>components-marklogic</module>
-        <module>components-googledrive</module>
-        <!-- Slow-building components are built last. -->
-        <module>components-salesforce</module>
-        <module>components-snowflake</module>
     </modules>
 </project>
