@@ -38,11 +38,15 @@ public class PythonRowDoFn extends DoFn<IndexedRecord, IndexedRecord>
 
     private PythonRowProperties properties = null;
 
-    private PythonInterpreter interpretor = null;
+    private PythonInterpreter interpreter = null;
 
     private PyCode pythonFunction = null;
 
     private JsonGenericRecordConverter jsonGenericRecordConverter = null;
+
+    private int nbOfTimesSetup = 0;
+
+    private int nbOfRecords = 0;
 
     @Override
     public ValidationResult initialize(RuntimeContainer container, PythonRowProperties componentProperties) {
@@ -52,12 +56,15 @@ public class PythonRowDoFn extends DoFn<IndexedRecord, IndexedRecord>
 
     @Setup
     public void setup() throws Exception {
-        interpretor = new PythonInterpreter();
+        nbOfTimesSetup ++;
+    //    System.err.println("Initialize python " + nbOfTimesSetup);
+        interpreter = new PythonInterpreter();
         if (MapType.MAP.equals(properties.mapType.getValue())) {
-            pythonFunction = interpretor.compile(setUpMap());
+            pythonFunction = interpreter.compile(setUpMap());
         } else { // flatmap
-            pythonFunction = interpretor.compile(setUpFlatMap());
+            pythonFunction = interpreter.compile(setUpFlatMap());
         }
+        interpreter.exec(pythonFunction);
     }
 
     @ProcessElement
@@ -69,7 +76,7 @@ public class PythonRowDoFn extends DoFn<IndexedRecord, IndexedRecord>
                 flatMap(context.element(), context);
             }
         }
-        interpretor.cleanup();
+        interpreter.cleanup();
     }
 
     private String setUpMap() {
@@ -95,14 +102,18 @@ public class PythonRowDoFn extends DoFn<IndexedRecord, IndexedRecord>
 
     private void map(IndexedRecord input, ProcessContext context) throws IOException {
         // Prepare Python environment
-        interpretor.set("inputJSON", new PyString(input.toString()));
+        interpreter.set("inputJSON", new PyString(input.toString()));
 
+        // nbOfRecords++;
+        long timeInit = System.currentTimeMillis();
         // Add user command
-        interpretor.exec(pythonFunction);
 
         // Retrieve results
-        interpretor.exec("outputJSON = userFunction(inputJSON)");
-        PyObject output = interpretor.get("outputJSON");
+        interpreter.exec("outputJSON = userFunction(inputJSON)");
+        PyObject output = interpreter.get("outputJSON");
+
+        //  if (nbOfRecords % 10000 == 0)
+        //      System.err.println("Records: " + nbOfRecords + "; duration: " + (System.currentTimeMillis() - timeInit));
 
         if (jsonGenericRecordConverter == null) {
             JsonSchemaInferrer jsonSchemaInferrer = new JsonSchemaInferrer(new ObjectMapper());
@@ -116,31 +127,37 @@ public class PythonRowDoFn extends DoFn<IndexedRecord, IndexedRecord>
 
     private void flatMap(IndexedRecord input, ProcessContext context) throws IOException {
         // Prepare Python environment
-        interpretor.set("inputJSON", new PyString(input.toString()));
+        interpreter.set("inputJSON", new PyString(input.toString()));
 
+     //   nbOfRecords++;
+        long timeInit = System.currentTimeMillis();
         // Add user command
-        interpretor.exec(pythonFunction);
 
         // Retrieve results
-        interpretor.exec("outputJSON = userFunction(inputJSON)");
-        PyObject outputList = interpretor.get("outputJSON");
+        interpreter.exec("outputJSON = userFunction(inputJSON)");
+        PyObject outputList = interpreter.get("outputJSON");
 
-        if (outputList instanceof PyList) {
+      //  if (nbOfRecords % 10000 == 0)
+      //      System.err.println("Records: " + nbOfRecords + "; duration: " + (System.currentTimeMillis() - timeInit));
+
+
+      //  long timeInit2 = System.currentTimeMillis();
+         if (outputList instanceof PyList) {
             PyList list = (PyList) outputList;
             for (Object output : list) {
-                if (jsonGenericRecordConverter == null) {
-                    JsonSchemaInferrer jsonSchemaInferrer = new JsonSchemaInferrer(new ObjectMapper());
-                    Schema jsonSchema = jsonSchemaInferrer.inferSchema(output.toString());
-                    jsonGenericRecordConverter = new JsonGenericRecordConverter(jsonSchema);
-                }
-                GenericRecord outputRecord = jsonGenericRecordConverter.convertToAvro(output.toString());
-                context.output(outputRecord);
+                 if (jsonGenericRecordConverter == null) {
+                      JsonSchemaInferrer jsonSchemaInferrer = new JsonSchemaInferrer(new ObjectMapper());
+                      Schema jsonSchema = jsonSchemaInferrer.inferSchema(output.toString());
+                      jsonGenericRecordConverter = new JsonGenericRecordConverter(jsonSchema);
+                 }
+                 GenericRecord outputRecord = jsonGenericRecordConverter.convertToAvro(output.toString());
+                 context.output(outputRecord);
             }
-        }
-    }
+         }
+     }
 
     @Teardown
     public void tearDown() {
-        interpretor.close();
+        interpreter.close();
     }
 }
