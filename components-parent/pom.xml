@@ -70,7 +70,7 @@
         <commons-math.version>2.1</commons-math.version>
         <commons-math3.version>3.4.1</commons-math3.version>
         <commons-modeler.version>2.0.1</commons-modeler.version>
-        <commons-net.version>2.2</commons-net.version>
+        <commons-net.version>3.6</commons-net.version>
         <commons-pool.version>1.5.4</commons-pool.version>
         <commons-pool2.version>2.4.2</commons-pool2.version>
         <cxf.version>3.2.1</cxf.version>
@@ -107,15 +107,7 @@
         <javapoet.version>1.8.0</javapoet.version>
         <javax.mail.version>1.6.0</javax.mail.version>
         <jaxb-impl.version>2.2.3-1</jaxb-impl.version>
-        <jersey-apache-client4.version>1.19.1</jersey-apache-client4.version>
-        <jersey-client.version>1.9</jersey-client.version>
-        <jersey-core.version>1.9</jersey-core.version>
-        <jersey-grizzly2.version>1.9</jersey-grizzly2.version>
-        <jersey-guice.version>1.9</jersey-guice.version>
-        <jersey-json.version>1.9</jersey-json.version>
-        <jersey-server.version>1.9</jersey-server.version>
-        <jersey-test-framework-core.version>1.9</jersey-test-framework-core.version>
-        <jersey-test-framework-grizzly2.version>1.9</jersey-test-framework-grizzly2.version>
+        <jersey.version>2.26</jersey.version>
         <jetty.version>9.4.1.v20170120</jetty.version>
         <jmespath-java.version>${aws.version}</jmespath-java.version>
         <joda-time.version>2.8.2</joda-time.version>
@@ -463,49 +455,19 @@
                 <version>${okio.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.sun.jersey.contribs</groupId>
-                <artifactId>jersey-apache-client4</artifactId>
-                <version>${jersey-apache-client4.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.jersey.contribs</groupId>
-                <artifactId>jersey-guice</artifactId>
-                <version>${jersey-guice.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.jersey.jersey-test-framework</groupId>
-                <artifactId>jersey-test-framework-core</artifactId>
-                <version>${jersey-test-framework-core.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.jersey.jersey-test-framework</groupId>
-                <artifactId>jersey-test-framework-grizzly2</artifactId>
-                <version>${jersey-test-framework-grizzly2.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.jersey</groupId>
-                <artifactId>jersey-client</artifactId>
-                <version>${jersey-client.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.jersey</groupId>
-                <artifactId>jersey-core</artifactId>
-                <version>${jersey-core.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.jersey</groupId>
-                <artifactId>jersey-grizzly2</artifactId>
-                <version>${jersey-grizzly2.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.jersey</groupId>
-                <artifactId>jersey-json</artifactId>
-                <version>${jersey-json.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.jersey</groupId>
+                <groupId>org.glassfish.jersey.core</groupId>
                 <artifactId>jersey-server</artifactId>
-                <version>${jersey-server.version}</version>
+                <version>${jersey.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-client</artifactId>
+                <version>${jersey.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-common</artifactId>
+                <version>${jersey.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.sun.mail</groupId>
