@@ -15,7 +15,7 @@
     </properties>
 
     <modules>
-        <module>components-couchbase</module>
+        <!--<module>components-couchbase</module>-->
         <module>components-kinesis</module>
         <module>components-marklogic</module>
         <module>components-googledrive</module>
